@@ -47,7 +47,7 @@ def summarize_chunk(text: str) -> str:
                 max_tokens=150,
             )
         except Exception as exc:
-            print(f"  ⚠️  OpenAI summarize failed: {exc}")
+            print(f"  Warning: OpenAI summarize failed: {exc}")
     return _fallback_summary(text)
 
 
@@ -72,7 +72,7 @@ def generate_hypothesis_questions(text: str, n_questions: int = 3) -> list[str]:
             questions = [_clean_question(line) for line in content.splitlines() if line.strip()]
             return [question for question in questions if question][:n_questions]
         except Exception as exc:
-            print(f"  ⚠️  OpenAI HyQA failed: {exc}")
+            print(f"  Warning: OpenAI HyQA failed: {exc}")
     return _fallback_questions(text, n_questions)
 
 
@@ -95,7 +95,7 @@ def contextual_prepend(text: str, document_title: str = "") -> str:
             )
             return f"{context}\n\n{text}" if context else text
         except Exception as exc:
-            print(f"  ⚠️  OpenAI contextual failed: {exc}")
+            print(f"  Warning: OpenAI contextual failed: {exc}")
     return f"{_fallback_context(document_title)}\n\n{text}"
 
 
@@ -117,7 +117,7 @@ def extract_metadata(text: str) -> dict:
             )
             return _normalize_metadata(result)
         except Exception as exc:
-            print(f"  ⚠️  OpenAI metadata failed: {exc}")
+            print(f"  Warning: OpenAI metadata failed: {exc}")
     return _fallback_metadata(text)
 
 
@@ -167,7 +167,7 @@ def _enrich_single_call(text: str, source: str) -> dict:
             ),
         }
     except Exception as exc:
-        print(f"  ⚠️  Enrichment API failed: {exc}")
+        print(f"  Warning: Enrichment API failed: {exc}")
         return fallback
 
 

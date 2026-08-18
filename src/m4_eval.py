@@ -6,7 +6,7 @@ import os, sys, json, math
 from dataclasses import dataclass
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import TEST_SET_PATH
+from config import OPENAI_API_KEY, TEST_SET_PATH
 
 
 @dataclass
@@ -30,21 +30,17 @@ def load_test_set(path: str = TEST_SET_PATH) -> list[dict]:
 def evaluate_ragas(questions: list[str], answers: list[str],
                    contexts: list[list[str]], ground_truths: list[str]) -> dict:
     """Run RAGAS evaluation."""
-    empty_result = {
-        "faithfulness": 0.0,
-        "answer_relevancy": 0.0,
-        "context_precision": 0.0,
-        "context_recall": 0.0,
-        "per_question": [],
-    }
     if not questions:
-        return empty_result
+        return _zero_results([], [], [], [])
+    lengths = {len(questions), len(answers), len(contexts), len(ground_truths)}
+    if len(lengths) != 1:
+        print("  Warning: RAGAS inputs must have the same length.")
+        return _zero_results([], [], [], [])
+    if not OPENAI_API_KEY:
+        print("  Warning: RAGAS skipped because OPENAI_API_KEY is not configured.")
+        return _zero_results(questions, answers, contexts, ground_truths)
 
     try:
-        lengths = {len(questions), len(answers), len(contexts), len(ground_truths)}
-        if len(lengths) != 1:
-            raise ValueError("RAGAS inputs must have the same length")
-
         from datasets import Dataset
         from ragas import evaluate
         from ragas.metrics import (
@@ -91,8 +87,35 @@ def evaluate_ragas(questions: list[str], answers: list[str],
         }
         return {**aggregates, "per_question": per_question}
     except Exception as exc:
-        print(f"  ⚠️  RAGAS evaluation failed: {exc}")
-        return empty_result
+        print(f"  Warning: RAGAS evaluation failed: {exc}")
+        return _zero_results(questions, answers, contexts, ground_truths)
+
+
+def _zero_results(questions: list[str], answers: list[str],
+                  contexts: list[list[str]], ground_truths: list[str]) -> dict:
+    """Build a structurally complete zero-score result when evaluation is unavailable."""
+    per_question = [
+        EvalResult(
+            question=question,
+            answer=answer,
+            contexts=context,
+            ground_truth=ground_truth,
+            faithfulness=0.0,
+            answer_relevancy=0.0,
+            context_precision=0.0,
+            context_recall=0.0,
+        )
+        for question, answer, context, ground_truth in zip(
+            questions, answers, contexts, ground_truths
+        )
+    ]
+    return {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0,
+        "per_question": per_question,
+    }
 
 
 def _safe_float(value) -> float:
